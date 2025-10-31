@@ -1,0 +1,48 @@
+server:
+  port: 8005
+
+spring:
+  application:
+    name: contenthub-search-service
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.200.130:8848
+        username: nacos
+        password: nacos
+  # Elasticsearch配置
+  elasticsearch:
+    uris: http://192.168.200.130:9200
+    username: elastic
+    password: wfhshuai
+  redis:
+    host: 192.168.200.130
+    port: 6379
+    password: 654321
+
+# SpringDoc配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  group-configs:
+    - group: 搜索服务API
+      paths-to-match: /**
+      packages-to-scan: com.contenthub.search.controller
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+

@@ -1,0 +1,89 @@
+server:
+  port: 8003
+
+spring:
+  application:
+    name: contenthub-comment-service
+  
+  # 允许循环依赖（Sentinel与Spring MVC的兼容性）
+  main:
+    allow-circular-references: true
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.200.130:8848
+        username: nacos
+        password: nacos
+    # Sentinel配置
+    sentinel:
+      transport:
+        dashboard: 192.168.200.130:8858  # Sentinel Dashboard地址
+        port: 8723  # 应用与Dashboard通信的端口
+      eager: true  # 立即启动Sentinel客户端
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://192.168.200.130:3306/content_hub?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: 123456
+    type: com.alibaba.druid.pool.DruidDataSource
+  redis:
+    host: 192.168.200.130
+    port: 6379
+    password: 654321
+    database: 1  # 与用户服务使用同一个数据库（Sa-Token需要）
+    timeout: 3000
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Sa-Token配置
+sa-token:
+  token-name: Authorization
+  timeout: 604800  # 7天
+  activity-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true
+  is-read-cookie: false
+  is-read-head: true
+
+# SpringDoc配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  group-configs:
+    - group: 评论服务API
+      paths-to-match: /**
+      packages-to-scan: com.contenthub.comment.controller
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+

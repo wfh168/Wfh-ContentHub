@@ -1,0 +1,93 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: contenthub-gateway
+  
+
+  
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.200.130:8848
+        username: nacos
+        password: nacos
+
+    gateway:
+      routes:
+        # 用户服务路由
+        - id: user-service
+          uri: lb://contenthub-user-service
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+
+        # 内容服务路由
+        - id: content-service
+          uri: lb://contenthub-content-service
+          predicates:
+            - Path=/api/content/**
+          filters:
+            - StripPrefix=1
+
+        # 评论服务路由
+        - id: comment-service
+          uri: lb://contenthub-comment-service
+          predicates:
+            - Path=/api/comment/**
+          filters:
+            - StripPrefix=1
+
+        # 通知服务路由
+        - id: notification-service
+          uri: lb://contenthub-notification-service
+          predicates:
+            - Path=/api/notification/**
+          filters:
+            - StripPrefix=1
+
+        # 搜索服务路由
+        - id: search-service
+          uri: lb://contenthub-search-service
+          predicates:
+            - Path=/api/search/**
+          filters:
+            - StripPrefix=1
+
+        # 文件服务路由
+        - id: file-service
+          uri: lb://contenthub-file-service
+          predicates:
+            - Path=/api/file/**
+          filters:
+            - StripPrefix=1
+
+        # 管理服务路由
+        - id: admin-service
+          uri: lb://contenthub-admin-service
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - StripPrefix=1
+
+      # 全局跨域配置
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+
+# Actuator 监控端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+
