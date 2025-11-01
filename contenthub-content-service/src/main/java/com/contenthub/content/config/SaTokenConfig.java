@@ -3,7 +3,7 @@ package com.contenthub.content.config;
 import com.contenthub.common.config.BaseSaTokenConfig;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -21,10 +21,19 @@ public class SaTokenConfig extends BaseSaTokenConfig {
      */
     @Override
     protected List<String> getServiceSpecificExcludePaths() {
-        // 根据业务需求，可以添加公开接口，例如：
-        // return Arrays.asList("/content/public/**", "/content/list");
-        // 目前所有接口都需要认证
-        return new ArrayList<>();
+        // 公开接口（不需要登录）
+        return Arrays.asList(
+                // 文章相关
+                "/content/article/list",           // 获取文章列表
+                "/content/article/*",              // 获取文章详情（GET请求）
+                // 分类相关
+                "/content/category/list",         // 获取分类列表
+                "/content/category/*",             // 获取分类详情（GET请求）
+                // 标签相关
+                "/content/tag/list",              // 获取标签列表
+                "/content/tag/*",                 // 获取标签详情（GET请求）
+                "/content/tag/article/*"          // 根据文章ID获取标签
+        );
     }
 }
 

@@ -26,7 +26,9 @@ public class SaTokenConfig extends BaseSaTokenConfig {
                 "/user/login",
                 "/user/register",
                 // 验证码接口
-                "/user/captcha/**"
+                "/user/captcha/**",
+                // 批量获取用户信息接口（允许服务间调用，不需要Token）
+                "/user/batch"
         );
     }
 }

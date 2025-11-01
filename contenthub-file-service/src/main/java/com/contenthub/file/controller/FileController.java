@@ -1,6 +1,7 @@
 package com.contenthub.file.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.contenthub.common.exception.BusinessException;
 import com.contenthub.common.result.Result;
 import com.contenthub.file.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,10 +26,13 @@ public class FileController {
 
     @Operation(
             summary = "上传头像",
-            description = "上传用户头像到MinIO（需要登录）\n\n" +
+            description = "上传用户头像到MinIO（需要登录或通过服务间调用）\n\n" +
                     "**文件要求：**\n" +
                     "- 仅支持图片格式（jpg, png, gif, bmp, webp, svg 等）\n" +
-                    "- 文件大小：最大2MB"
+                    "- 文件大小：最大2MB\n\n" +
+                    "**调用方式：**\n" +
+                    "- 用户直接调用：需要Token，userId从Token获取\n" +
+                    "- 服务间调用：需要传递userId参数，同时需要传递Token"
     )
     @PostMapping(value = "/avatar/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<String> uploadAvatar(
@@ -37,9 +41,17 @@ public class FileController {
                     required = true,
                     content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
             )
-            @RequestPart("file") MultipartFile file) {
-        // 从Sa-Token获取当前登录用户ID
-        long userId = StpUtil.getLoginIdAsLong();
+            @RequestPart("file") MultipartFile file,
+            @Parameter(description = "用户ID（可选，用于服务间调用；如果未提供则从Token获取）")
+            @RequestParam(value = "userId", required = false) Long userId) {
+        // 如果未传入userId，从Sa-Token获取当前登录用户ID
+        if (userId == null) {
+            try {
+                userId = StpUtil.getLoginIdAsLong();
+            } catch (Exception e) {
+                throw new BusinessException("用户ID不能为空，请提供userId参数或确保已登录");
+            }
+        }
         String avatarUrl = fileService.uploadAvatar(file, userId);
         return Result.success("头像上传成功", avatarUrl);
     }

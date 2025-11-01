@@ -107,6 +107,12 @@
             <groupId>com.contenthub</groupId>
             <artifactId>contenthub-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.contenthub</groupId>
+            <artifactId>contenthub-user-service</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,0 +1,233 @@
+{
+  "comment": "评论服务接口测试JSON示例 - 用户ID: 1, 2, 3",
+  "base_url": {
+    "user_service": "http://localhost:8001",
+    "comment_service": "http://localhost:8003"
+  },
+  "test_scenarios": [
+    {
+      "step": 1,
+      "name": "用户1登录",
+      "method": "POST",
+      "url": "http://localhost:8001/user/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "username": "admin",
+        "password": "admin123",
+        "captchaKey": "captcha:xxx",
+        "captchaCode": "ABCD"
+      },
+      "note": "先获取验证码，然后使用验证码登录"
+    },
+    {
+      "step": 2,
+      "name": "用户2登录",
+      "method": "POST",
+      "url": "http://localhost:8001/user/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "username": "user2",
+        "password": "password2",
+        "captchaKey": "captcha:xxx",
+        "captchaCode": "ABCD"
+      }
+    },
+    {
+      "step": 3,
+      "name": "用户3登录",
+      "method": "POST",
+      "url": "http://localhost:8001/user/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "username": "user3",
+        "password": "password3",
+        "captchaKey": "captcha:xxx",
+        "captchaCode": "ABCD"
+      }
+    },
+    {
+      "step": 4,
+      "name": "用户1发表一级评论",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/create",
+      "headers": {
+        "Authorization": "用户1的Token（从登录响应获取）",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "articleId": 1,
+        "content": "这是一条一级评论，用户1评论文章1"
+      }
+    },
+    {
+      "step": 5,
+      "name": "用户2发表一级评论",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/create",
+      "headers": {
+        "Authorization": "用户2的Token",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "articleId": 1,
+        "content": "用户2也来评论一下，这篇文章很不错！"
+      }
+    },
+    {
+      "step": 6,
+      "name": "用户3发表一级评论",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/create",
+      "headers": {
+        "Authorization": "用户3的Token",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "articleId": 1,
+        "content": "用户3的观点：非常赞同！"
+      }
+    },
+    {
+      "step": 7,
+      "name": "用户2回复用户1的评论（二级评论）",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/create",
+      "headers": {
+        "Authorization": "用户2的Token",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "articleId": 1,
+        "content": "用户2回复用户1：说得对！",
+        "parentId": 1,
+        "rootId": 1
+      },
+      "note": "假设用户1的评论ID是1，parentId和rootId都指向一级评论ID"
+    },
+    {
+      "step": 8,
+      "name": "用户3回复用户1的评论（二级评论）",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/create",
+      "headers": {
+        "Authorization": "用户3的Token",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "articleId": 1,
+        "content": "用户3回复用户1：我也这么认为！",
+        "parentId": 1,
+        "rootId": 1
+      }
+    },
+    {
+      "step": 9,
+      "name": "用户1回复用户2的评论（二级评论回复二级评论）",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/create",
+      "headers": {
+        "Authorization": "用户1的Token",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "articleId": 1,
+        "content": "用户1回复用户2：谢谢支持！",
+        "parentId": 4,
+        "rootId": 1
+      },
+      "note": "假设用户2的评论ID是4，parentId指向用户2的评论ID，rootId指向一级评论ID"
+    },
+    {
+      "step": 10,
+      "name": "用户2给评论1点赞",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/1/like",
+      "headers": {
+        "Authorization": "用户2的Token"
+      }
+    },
+    {
+      "step": 11,
+      "name": "用户3给评论1点赞",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/1/like",
+      "headers": {
+        "Authorization": "用户3的Token"
+      }
+    },
+    {
+      "step": 12,
+      "name": "用户1给评论2点赞",
+      "method": "POST",
+      "url": "http://localhost:8003/comment/2/like",
+      "headers": {
+        "Authorization": "用户1的Token"
+      }
+    },
+    {
+      "step": 13,
+      "name": "获取评论列表（公开接口，不需要Token）",
+      "method": "GET",
+      "url": "http://localhost:8003/comment/list?articleId=1&page=1&size=20",
+      "headers": {},
+      "note": "这是公开接口，不需要登录"
+    },
+    {
+      "step": 14,
+      "name": "获取评论详情（公开接口，不需要Token）",
+      "method": "GET",
+      "url": "http://localhost:8003/comment/1",
+      "headers": {},
+      "note": "这是公开接口，不需要登录"
+    },
+    {
+      "step": 15,
+      "name": "检查是否已点赞",
+      "method": "GET",
+      "url": "http://localhost:8003/comment/1/like/check",
+      "headers": {
+        "Authorization": "用户2的Token"
+      }
+    },
+    {
+      "step": 16,
+      "name": "取消点赞",
+      "method": "DELETE",
+      "url": "http://localhost:8003/comment/1/like",
+      "headers": {
+        "Authorization": "用户2的Token"
+      }
+    },
+    {
+      "step": 17,
+      "name": "删除评论（只能删除自己的评论）",
+      "method": "DELETE",
+      "url": "http://localhost:8003/comment/1",
+      "headers": {
+        "Authorization": "用户1的Token"
+      },
+      "note": "只能删除自己发表的评论"
+    },
+    {
+      "step": 18,
+      "name": "获取评论数量（公开接口）",
+      "method": "GET",
+      "url": "http://localhost:8003/comment/count?articleId=1",
+      "headers": {},
+      "note": "这是公开接口，不需要登录"
+    }
+  ],
+  "curl_examples": {
+    "user1_create_comment": "curl -X POST 'http://localhost:8003/comment/create' -H 'Authorization: {USER1_TOKEN}' -H 'Content-Type: application/json' -d '{\"articleId\":1,\"content\":\"用户1的评论\"}'",
+    "user2_reply_comment": "curl -X POST 'http://localhost:8003/comment/create' -H 'Authorization: {USER2_TOKEN}' -H 'Content-Type: application/json' -d '{\"articleId\":1,\"content\":\"用户2回复用户1\",\"parentId\":1,\"rootId\":1}'",
+    "like_comment": "curl -X POST 'http://localhost:8003/comment/1/like' -H 'Authorization: {USER_TOKEN}'",
+    "get_comment_list": "curl -X GET 'http://localhost:8003/comment/list?articleId=1&page=1&size=20'"
+  }
+}
+

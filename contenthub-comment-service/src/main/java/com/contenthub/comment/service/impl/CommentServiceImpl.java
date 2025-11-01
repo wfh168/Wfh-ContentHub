@@ -138,12 +138,39 @@ public class CommentServiceImpl implements CommentService {
                 .collect(Collectors.toList());
         
         // 查询二级评论（所有一级评论的子评论）
+        // 二级评论条件：
+        // 1. parentId 不为 NULL（确保是二级评论）
+        // 2. rootId 在一级评论ID列表中，或者 parentId 在一级评论ID列表中（处理数据不一致的情况）
         LambdaQueryWrapper<Comment> childWrapper = new LambdaQueryWrapper<>();
-        childWrapper.in(Comment::getRootId, commentIds)
+        childWrapper.isNotNull(Comment::getParentId) // 确保是二级评论（parentId不为空）
+                   .and(wrapper -> wrapper
+                       .in(Comment::getRootId, commentIds) // rootId 在一级评论ID中
+                       .or()
+                       .in(Comment::getParentId, commentIds)) // 或者 parentId 在一级评论ID中（处理rootId为null的情况）
                    .eq(Comment::getStatus, 1)
                    .orderByAsc(Comment::getCreatedAt); // 二级评论按时间正序
         
         List<Comment> childComments = commentMapper.selectList(childWrapper);
+        log.debug("查询到一级评论数量: {}, 二级评论数量: {}", comments.size(), childComments.size());
+        
+        // 修正二级评论的 rootId
+        childComments.forEach(child -> {
+            if (child.getParentId() != null) {
+                // 如果 rootId 为 null，但是 parentId 在一级评论ID列表中，则将 rootId 设置为 parentId
+                if (child.getRootId() == null && commentIds.contains(child.getParentId())) {
+                    child.setRootId(child.getParentId());
+                    log.warn("修正二级评论的rootId（null情况）: commentId={}, parentId={}, rootId设置为={}", 
+                            child.getId(), child.getParentId(), child.getRootId());
+                }
+                // 如果 rootId 不在当前一级评论ID列表中，但 parentId 在，则使用 parentId 作为 rootId
+                else if (child.getRootId() != null && !commentIds.contains(child.getRootId()) 
+                        && commentIds.contains(child.getParentId())) {
+                    log.warn("修正二级评论的rootId（不匹配情况）: commentId={}, oldRootId={}, parentId={}, rootId设置为={}", 
+                            child.getId(), child.getRootId(), child.getParentId(), child.getParentId());
+                    child.setRootId(child.getParentId());
+                }
+            }
+        });
         
         // 获取子评论的用户ID
         List<Long> childUserIds = childComments.stream()
@@ -169,17 +196,34 @@ public class CommentServiceImpl implements CommentService {
             likedCommentIds.addAll(likedChildCommentIds);
         }
         
-        // 构建子评论Map（按 rootId 分组）
+        // 构建子评论Map（按 rootId 分组，如果 rootId 不在当前一级评论ID中，则按 parentId 分组）
         Map<Long, List<Comment>> childCommentMap = childComments.stream()
-                .collect(Collectors.groupingBy(Comment::getRootId));
+                .filter(comment -> comment.getRootId() != null || comment.getParentId() != null)
+                .collect(Collectors.groupingBy(comment -> {
+                    // 优先使用 rootId，如果 rootId 不在当前一级评论ID列表中，则使用 parentId
+                    Long rootId = comment.getRootId();
+                    if (rootId != null && commentIds.contains(rootId)) {
+                        return rootId;
+                    } else if (comment.getParentId() != null && commentIds.contains(comment.getParentId())) {
+                        return comment.getParentId();
+                    }
+                    // 如果都不匹配，仍然使用 rootId（用于日志记录）
+                    return rootId != null ? rootId : comment.getParentId();
+                }));
+        
+        log.debug("子评论分组结果: rootIds={}, commentIds={}", 
+                childCommentMap.keySet(), 
+                childComments.stream().map(c -> c.getId() + "(rootId=" + c.getRootId() + ",parentId=" + c.getParentId() + ")").collect(Collectors.joining(",")));
         
         // 转换为VO
-        return comments.stream()
+        List<CommentVO> result = comments.stream()
                 .map(comment -> {
                     CommentVO vo = convertToVO(comment, userMap, likedCommentIds.contains(comment.getId()));
                     
-                    // 添加子评论
+                    // 添加子评论（根据 rootId 查找）
                     List<Comment> children = childCommentMap.getOrDefault(comment.getId(), Collections.emptyList());
+                    log.debug("评论ID={}的子评论数量={}", comment.getId(), children.size());
+                    
                     List<CommentVO> childVOs = children.stream()
                             .map(child -> convertToVO(child, userMap, likedCommentIds.contains(child.getId())))
                             .collect(Collectors.toList());
@@ -188,6 +232,12 @@ public class CommentServiceImpl implements CommentService {
                     return vo;
                 })
                 .collect(Collectors.toList());
+        
+        log.info("返回评论列表: 一级评论数量={}, 总评论数量={}", 
+                result.size(), 
+                result.size() + result.stream().mapToInt(c -> c.getChildren() != null ? c.getChildren().size() : 0).sum());
+        
+        return result;
     }
     
     @Override
@@ -297,13 +347,31 @@ public class CommentServiceImpl implements CommentService {
                     .map(String::valueOf)
                     .collect(Collectors.joining(","));
             
+            log.debug("调用用户服务批量获取用户信息: userIds={}", userIdsStr);
             Result<List<UserInfoVO>> result = userServiceClient.getUsersByIds(userIdsStr);
-            if (result != null && result.getCode() == 200 && result.getData() != null) {
-                return result.getData().stream()
+            
+            if (result == null) {
+                log.error("用户服务返回结果为空: userIds={}", userIdsStr);
+                return Collections.emptyMap();
+            }
+            
+            log.debug("用户服务返回: code={}, message={}, dataSize={}", 
+                    result.getCode(), result.getMessage(), 
+                    result.getData() != null ? result.getData().size() : 0);
+            
+            if (result.getCode() == 200 && result.getData() != null && !result.getData().isEmpty()) {
+                Map<Long, UserInfoVO> userMap = result.getData().stream()
+                        .filter(u -> u != null && u.getId() != null)
                         .collect(Collectors.toMap(UserInfoVO::getId, u -> u));
+                log.info("成功获取用户信息: 请求数量={}, 返回数量={}, userMap={}", 
+                        userIds.size(), userMap.size(), userMap.keySet());
+                return userMap;
+            } else {
+                log.warn("用户服务返回异常: code={}, message={}, userIds={}", 
+                        result.getCode(), result.getMessage(), userIdsStr);
             }
         } catch (Exception e) {
-            log.warn("批量获取用户信息失败: userIds={}, error={}", userIds, e.getMessage());
+            log.error("批量获取用户信息异常: userIds={}, error={}", userIds, e.getMessage(), e);
         }
         
         return Collections.emptyMap();
