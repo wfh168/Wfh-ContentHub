@@ -34,7 +34,7 @@ public class CommentController {
         return Result.success("评论发表成功", commentId);
     }
     
-    @Operation(summary = "删除评论", description = "删除自己的评论（软删除）")
+    @Operation(summary = "删除评论", description = "删除自己的评论（只能删除自己的评论）")
     @DeleteMapping("/{commentId}")
     public Result<String> deleteComment(
             @Parameter(description = "评论ID", required = true)
@@ -42,6 +42,16 @@ public class CommentController {
         long userId = StpUtil.getLoginIdAsLong();
         commentService.deleteComment(commentId, userId);
         return Result.success("删除评论成功", null);
+    }
+    
+    @Operation(summary = "管理员删除评论", description = "管理员删除评论（软删除）")
+    @DeleteMapping("/admin/{commentId}")
+    public Result<String> adminDeleteComment(
+            @Parameter(description = "评论ID", required = true)
+            @PathVariable Long commentId) {
+        long userId = StpUtil.getLoginIdAsLong();
+        commentService.adminDeleteComment(commentId, userId);
+        return Result.success("管理员删除评论成功", null);
     }
     
     @Operation(
@@ -77,8 +87,7 @@ public class CommentController {
     
     @Operation(
             summary = "获取评论详情",
-            description = "根据评论ID获取评论详情",
-            security = {}  // 公开接口，不需要认证
+            description = "根据评论ID获取评论详情（公开接口，不需要登录）"
     )
     @GetMapping("/{commentId}")
     public Result<CommentVO> getCommentDetail(
@@ -91,7 +100,7 @@ public class CommentController {
                 currentUserId = StpUtil.getLoginIdAsLong();
             }
         } catch (Exception e) {
-            // 未登录，currentUserId 为 null
+            // 未登录，currentUserId 为 null（这是正常的，因为这是公开接口）
         }
         
         CommentVO comment = commentService.getCommentDetail(commentId, currentUserId);

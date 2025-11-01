@@ -19,11 +19,18 @@ public interface CommentService {
     Long createComment(Long userId, CreateCommentDTO createCommentDTO);
     
     /**
-     * 删除评论（软删除）
+     * 删除评论（用户操作：只能删除自己的评论）
      * @param commentId 评论ID
      * @param userId 用户ID（用于权限验证）
      */
     void deleteComment(Long commentId, Long userId);
+    
+    /**
+     * 管理员删除评论（管理员功能：软删除）
+     * @param commentId 评论ID
+     * @param userId 用户ID（用于验证是否为管理员）
+     */
+    void adminDeleteComment(Long commentId, Long userId);
     
     /**
      * 获取评论列表（支持分页）

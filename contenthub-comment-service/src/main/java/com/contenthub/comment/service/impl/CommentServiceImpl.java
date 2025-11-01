@@ -108,6 +108,39 @@ public class CommentServiceImpl implements CommentService {
     }
     
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adminDeleteComment(Long commentId, Long userId) {
+        // 1. 验证评论是否存在
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null) {
+            throw new BusinessException("评论不存在");
+        }
+        
+        // 2. 验证当前用户是否为管理员
+        try {
+            Result<com.contenthub.user.vo.UserInfoVO> userResult = userServiceClient.getUserById(userId);
+            if (userResult == null || userResult.getCode() != 200 || userResult.getData() == null) {
+                throw new BusinessException("获取用户信息失败");
+            }
+            
+            com.contenthub.user.vo.UserInfoVO userInfo = userResult.getData();
+            if (!"admin".equals(userInfo.getRole())) {
+                throw new BusinessException("无权限操作，只有管理员可以删除评论");
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("调用用户服务失败: userId={}, error={}", userId, e.getMessage());
+            throw new BusinessException("验证管理员权限失败");
+        }
+        
+        // 3. 软删除评论（MyBatis-Plus 自动处理）
+        commentMapper.deleteById(commentId);
+        
+        log.info("管理员删除评论成功: commentId={}, adminUserId={}", commentId, userId);
+    }
+    
+    @Override
     public List<CommentVO> getCommentList(Long articleId, Integer page, Integer size, Long currentUserId) {
         // 设置分页
         Page<Comment> pageParam = new Page<>(page != null ? page : 1, size != null ? size : 20);

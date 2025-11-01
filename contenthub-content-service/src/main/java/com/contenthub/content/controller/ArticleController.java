@@ -102,7 +102,18 @@ public class ArticleController {
         return Result.success("更新成功", null);
     }
     
-    @Operation(summary = "删除文章", description = "删除文章（软删除）", security = {@SecurityRequirement(name = "Authorization")})
+    @Operation(summary = "下架文章", description = "下架文章（作者操作：将文章状态改为草稿，不删除）", 
+               security = {@SecurityRequirement(name = "Authorization")})
+    @PutMapping("/{articleId}/unpublish")
+    public Result<String> unpublishArticle(
+            @Parameter(description = "文章ID", required = true) @PathVariable Long articleId) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        articleService.unpublishArticle(articleId, userId);
+        return Result.success("下架成功", null);
+    }
+    
+    @Operation(summary = "删除文章", description = "删除文章（管理员功能：软删除）", 
+               security = {@SecurityRequirement(name = "Authorization")})
     @DeleteMapping("/{articleId}")
     public Result<String> deleteArticle(
             @Parameter(description = "文章ID", required = true) @PathVariable Long articleId) {

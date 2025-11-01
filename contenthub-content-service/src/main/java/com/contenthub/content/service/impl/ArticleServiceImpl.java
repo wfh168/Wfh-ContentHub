@@ -210,22 +210,56 @@ public class ArticleServiceImpl implements ArticleService {
     
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteArticle(Long articleId, Long userId) {
+    public void unpublishArticle(Long articleId, Long userId) {
         // 1. 查询文章
         Article article = articleMapper.selectById(articleId);
         if (article == null) {
             throw new BusinessException("文章不存在");
         }
         
-        // 2. 验证权限（只能删除自己的文章）
+        // 2. 验证权限（只能下架自己的文章）
         if (!article.getUserId().equals(userId)) {
-            throw new BusinessException("只能删除自己的文章");
+            throw new BusinessException("只能下架自己的文章");
+        }
+        
+        // 3. 下架文章：将状态改为草稿（status=0），不删除
+        article.setStatus(0);
+        articleMapper.updateById(article);
+        
+        log.info("下架文章成功: articleId={}, userId={}", articleId, userId);
+    }
+    
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteArticle(Long articleId, Long userId) {
+        // 1. 验证文章是否存在
+        Article article = articleMapper.selectById(articleId);
+        if (article == null) {
+            throw new BusinessException("文章不存在");
+        }
+        
+        // 2. 验证当前用户是否为管理员
+        try {
+            Result<UserInfoVO> userResult = userServiceClient.getUserById(userId);
+            if (userResult == null || userResult.getCode() != 200 || userResult.getData() == null) {
+                throw new BusinessException("获取用户信息失败");
+            }
+            
+            UserInfoVO userInfo = userResult.getData();
+            if (!"admin".equals(userInfo.getRole())) {
+                throw new BusinessException("无权限操作，只有管理员可以删除文章");
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("调用用户服务失败: userId={}, error={}", userId, e.getMessage());
+            throw new BusinessException("验证管理员权限失败");
         }
         
         // 3. 软删除文章（MyBatis-Plus 自动处理）
         articleMapper.deleteById(articleId);
         
-        log.info("删除文章成功: articleId={}, userId={}", articleId, userId);
+        log.info("管理员删除文章成功: articleId={}, adminUserId={}", articleId, userId);
     }
     
     @Override

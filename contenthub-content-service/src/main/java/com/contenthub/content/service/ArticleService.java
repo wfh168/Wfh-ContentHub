@@ -28,9 +28,16 @@ public interface ArticleService {
     void updateArticle(Long articleId, Long userId, UpdateArticleDTO updateArticleDTO);
     
     /**
-     * 删除文章（软删除）
+     * 下架文章（作者操作：将文章状态改为草稿，不删除）
      * @param articleId 文章ID
-     * @param userId 用户ID（用于权限验证）
+     * @param userId 用户ID（用于权限验证，只能下架自己的文章）
+     */
+    void unpublishArticle(Long articleId, Long userId);
+    
+    /**
+     * 删除文章（管理员功能：软删除）
+     * @param articleId 文章ID
+     * @param userId 用户ID（用于验证是否为管理员）
      */
     void deleteArticle(Long articleId, Long userId);
     
